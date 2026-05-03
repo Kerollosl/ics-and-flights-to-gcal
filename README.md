@@ -1,4 +1,4 @@
-# Flight Email Parser — Chrome Extension
+# ICS and Flights to Google Calendar — Chrome Extension
 
 A Chrome extension that detects airline confirmation emails in Gmail, extracts flight details, and lets you:
 
@@ -21,7 +21,7 @@ A Chrome extension that detects airline confirmation emails in Gmail, extracts f
 1. Open Chrome and go to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in top-right)
 3. Click **Load unpacked**
-4. Select the `flight-email-parser` folder
+4. Select the `ics-and-flights-to-gcal` folder
 
 ### 2. Set Up Google Calendar Integration (Optional)
 
@@ -69,7 +69,7 @@ Delta, United, American, Southwest, JetBlue, Spirit, Frontier, Alaska, Hawaiian,
 ## Project Structure
 
 ```
-flight-email-parser/
+ics-and-flights-to-gcal/
 ├── manifest.json              # Chrome extension manifest
 ├── background/
 │   └── service-worker.js      # Google Calendar API integration
