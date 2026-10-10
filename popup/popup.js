@@ -31,7 +31,7 @@ dropZone.addEventListener('dragleave', () => {
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
-  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.ics'));
+  const files = Array.from(e.dataTransfer.files).filter(f => /\.ics$/i.test(f.name));
   if (files.length) {
     processFiles(files);
   } else {
@@ -40,7 +40,7 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 fileInput.addEventListener('change', (e) => {
-  const files = Array.from(e.target.files).filter(f => f.name.endsWith('.ics'));
+  const files = Array.from(e.target.files).filter(f => /\.ics$/i.test(f.name));
   if (files.length) processFiles(files);
 });
 
@@ -87,21 +87,9 @@ function processFiles(files) {
   });
 }
 
-function parseFile(filename, icsText) {
-  const jcalData = ICAL.parse(icsText);
-  const comp = new ICAL.Component(jcalData);
-  const vevents = comp.getAllSubcomponents('vevent');
-
-  if (!vevents.length) return null;
-
-  const events = vevents.map((ve) => {
-    const event = new ICAL.Event(ve);
-    const url = buildGCalUrl(event);
-    parsedUrls.push(url);
-    return { event, url };
-  });
-
-  return { filename, events };
+function parseFile(filename,icsText){
+ const events=CalendarImport.parse(icsText);if(!events.length)return null;
+ events.forEach(({url})=>parsedUrls.push(url));return {filename,events};
 }
 
 function finishProcessing(errors) {
@@ -136,63 +124,7 @@ function finishProcessing(errors) {
 
 // ─── Google Calendar URL Builder ──────────────────────────────────────────────
 
-function isAllDay(icalDate) {
-  return icalDate && icalDate.isDate;
-}
-
-function formatDateAllDay(icalDate) {
-  // All-day format: YYYYMMDD (no time, no Z)
-  if (!icalDate) return '';
-  const y = String(icalDate.year).padStart(4, '0');
-  const m = String(icalDate.month).padStart(2, '0');
-  const d = String(icalDate.day).padStart(2, '0');
-  return `${y}${m}${d}`;
-}
-
-function formatDateTimed(icalDate) {
-  // Timed format: YYYYMMDDTHHMMSS (no Z — we pass ctz separately)
-  if (!icalDate) return '';
-  const y = String(icalDate.year).padStart(4, '0');
-  const mo = String(icalDate.month).padStart(2, '0');
-  const d = String(icalDate.day).padStart(2, '0');
-  const h = String(icalDate.hour).padStart(2, '0');
-  const mi = String(icalDate.minute).padStart(2, '0');
-  const s = String(icalDate.second).padStart(2, '0');
-  return `${y}${mo}${d}T${h}${mi}${s}`;
-}
-
-function buildGCalUrl(event) {
-  const allDay = isAllDay(event.startDate);
-  const formatDate = allDay ? formatDateAllDay : formatDateTimed;
-
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: event.summary || 'Untitled Event',
-    dates: `${formatDate(event.startDate)}/${formatDate(event.endDate)}`,
-    details: event.description || '',
-    location: event.location || ''
-  });
-
-  // Preserve timezone for timed events
-  if (!allDay && event.startDate && event.startDate.timezone) {
-    const tz = event.startDate.timezone;
-    // Skip floating/UTC — GCal handles those fine without ctz
-    if (tz !== 'floating' && tz !== 'UTC' && tz !== 'Z') {
-      params.set('ctz', tz);
-    }
-  }
-
-  // Preserve recurrence rules
-  const vevent = event.component;
-  if (vevent) {
-    const rruleProp = vevent.getFirstProperty('rrule');
-    if (rruleProp) {
-      params.set('recur', `RRULE:${rruleProp.getFirstValue().toString()}`);
-    }
-  }
-
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
+const {isAllDay}=CalendarImport;
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
@@ -333,3 +265,4 @@ function showStatus(msg, type) {
 function hideStatus() {
   statusEl.style.display = 'none';
 }
+
