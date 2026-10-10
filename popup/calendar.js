@@ -28,6 +28,10 @@
    if(c.getFirstPropertyValue('status')==='CANCELLED')return [];
    // A template URL cannot represent an overridden recurrence occurrence safely.
    if(c.hasProperty('recurrence-id'))throw Error('Recurring exceptions require native Calendar ICS import');
+   for(const name of ['dtstart','dtend']){
+    const tzid=c.getFirstProperty(name)?.getParameter('tzid');
+    if(tzid && tzid!=='UTC' && !ICAL.TimezoneService.has(tzid))throw Error(`Missing VTIMEZONE definition for ${tzid}; use native Calendar ICS import`);
+   }
    const event=new ICAL.Event(c);const key=`${event.uid}|${event.startDate?.toString()}`;
    if(seen.has(key))return [];seen.add(key);return [{event,url:buildGCalUrl(event)}];
   });

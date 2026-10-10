@@ -8,3 +8,6 @@ test('all-day default end is next exclusive day',()=>assert.equal(new URL(parse(
 test('floating times remain floating',()=>assert.equal(new URL(parse(['DTSTART:20261010T120000','DTEND:20261010T130000'])[0].url).searchParams.get('dates'),'20261010T120000/20261010T130000'));
 test('recurrence exclusions survive',()=>assert.match(new URL(parse(['DTSTART:20261010T120000Z','RRULE:FREQ=DAILY;COUNT=3','EXDATE:20261011T120000Z'])[0].url).searchParams.get('recur'),/EXDATE/));
 test('overridden instances fail explicitly',()=>assert.throws(()=>parse(['DTSTART:20261010T120000Z','RECURRENCE-ID:20261009T120000Z']),/native Calendar/));
+
+test('unknown named zone rejected rather than silently shifted',()=>assert.throws(()=>parse(['DTSTART;TZID=Unknown/Zone:20261010T120000']),/Missing VTIMEZONE/));
+test('timed missing end defaults to one hour',()=>assert.equal(new URL(parse(['DTSTART:20261010T120000Z'])[0].url).searchParams.get('dates'),'20261010T120000Z/20261010T130000Z'));

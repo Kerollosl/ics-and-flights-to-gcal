@@ -11,6 +11,7 @@ const statusEl = document.getElementById('status');
 
 // Store parsed GCal URLs for "Open All"
 let parsedUrls = [];
+const parsedEventKeys = new Set();
 
 // Store file groups: [{ filename, events: [{ event, url }] }]
 let fileGroups = [];
@@ -63,6 +64,7 @@ function processFiles(files) {
   let errors = [];
   fileGroups = [];
   parsedUrls = [];
+  parsedEventKeys.clear();
   showLoading();
 
   files.forEach((file) => {
@@ -88,7 +90,7 @@ function processFiles(files) {
 }
 
 function parseFile(filename,icsText){
- const events=CalendarImport.parse(icsText);if(!events.length)return null;
+ const events=CalendarImport.parse(icsText).filter(({event})=>{const key=`${event.uid}|${event.startDate.toString()}`;if(parsedEventKeys.has(key))return false;parsedEventKeys.add(key);return true;});if(!events.length)return null;
  events.forEach(({url})=>parsedUrls.push(url));return {filename,events};
 }
 
@@ -221,6 +223,7 @@ function resetUI() {
   eventList.innerHTML = '';
   fileInput.value = '';
   parsedUrls = [];
+  parsedEventKeys.clear();
   fileGroups = [];
   hideStatus();
 }
