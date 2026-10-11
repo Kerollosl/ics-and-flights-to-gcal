@@ -20,6 +20,13 @@ let fileGroups = [];
 
 dropZone.addEventListener('click', () => fileInput.click());
 
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
 dropZone.addEventListener('dragover', (e) => {
   e.preventDefault();
   dropZone.classList.add('drag-over');
@@ -49,12 +56,12 @@ fileInput.addEventListener('change', (e) => {
 
 function showLoading() {
   dropZone.classList.add('loading');
-  dropZone.querySelector('p').innerHTML = 'Parsing events<span class="loading-dots"></span>';
+  dropZone.querySelector('p').innerHTML = 'Reading calendar files<span class="loading-dots"></span>';
 }
 
 function hideLoading() {
   dropZone.classList.remove('loading');
-  dropZone.querySelector('p').innerHTML = 'Drop <strong>.ics</strong> file(s) here<br><span>or click to browse</span>';
+  dropZone.querySelector('p').innerHTML = 'Choose <strong>.ics</strong> file(s)<br><span id="drop-zone-help">Drop files here or click to browse</span>';
 }
 
 // ─── File Processing ──────────────────────────────────────────────────────────
@@ -136,8 +143,8 @@ function renderEvents(groups) {
   const multiFile = groups.length > 1;
 
   if (totalEvents > 1) {
-    html += `<p class="events-header">${totalEvents} events from ${groups.length} file${groups.length > 1 ? 's' : ''}</p>`;
-    html += `<button class="btn-open-all" id="openAllBtn">Open All in Google Calendar</button>`;
+    html += `<p class="events-header">${totalEvents} events ready to review</p>`;
+    html += `<button class="btn-open-all" id="openAllBtn">Open ${totalEvents} events in Google Calendar</button>`;
   }
 
   let globalIndex = 0;
@@ -177,16 +184,19 @@ function renderEvents(groups) {
             ${event.location ? `<span>${escapeHtml(event.location)}</span>` : ''}
           </div>
           <div class="ev-actions">
-            <button class="btn btn-gcal" data-index="${idx}">Open in Google Calendar</button>
+            <button class="btn btn-gcal" data-index="${idx}" aria-label="Open ${escapeHtml(event.summary || 'untitled event')} in Google Calendar">Open</button>
           </div>
         </div>
       `;
     }).join('');
   });
 
+  // Jump to the Flighty desktop app
+  html += `<button class="btn-flighty" id="flightyBtn">Open Flighty</button>`;
+
   // "Upload another" link
   html += `<div class="reset-link-wrap">
-    <a href="#" id="resetBtn" class="reset-link">Upload more files</a>
+    <a href="#" id="resetBtn" class="reset-link">Choose different files</a>
   </div>`;
 
   eventList.innerHTML = html;
@@ -209,9 +219,25 @@ function renderEvents(groups) {
     });
   }
 
+  document.getElementById('flightyBtn').addEventListener('click', openFlighty);
+
   document.getElementById('resetBtn').addEventListener('click', (e) => {
     e.preventDefault();
     resetUI();
+  });
+}
+
+// ─── Flighty ──────────────────────────────────────────────────────────────────
+
+function openFlighty() {
+  // Flighty registers the flighty:// scheme on macOS/iOS. Open it in a
+  // throwaway tab so the OS hands off to the app, then close the tab.
+  chrome.tabs.create({ url: 'flighty://' }, (tab) => {
+    if (chrome.runtime.lastError || !tab?.id) return;
+    setTimeout(
+      () => chrome.tabs.remove(tab.id, () => void chrome.runtime.lastError),
+      800
+    );
   });
 }
 
@@ -256,7 +282,7 @@ function isSameDay(a, b) {
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, '&quot;');
 }
 
 function showStatus(msg, type) {
