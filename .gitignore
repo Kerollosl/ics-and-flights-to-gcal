@@ -16,3 +16,4 @@ playwright-report/
 .ipynb_checkpoints/
 .idea/
 .DS_Store
+dist/

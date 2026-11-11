@@ -8,16 +8,16 @@ MV3 Chrome Extension that parses `.ics` files (drag-drop or file picker), previe
 popup/          → popup.html + popup.js (UI: drag-drop zone, status)
 popup/calendar.js → CalendarImport parsing and Google Calendar URL generation
 popup/ical.min.js → bundled ical.js library
-manifest.json   → MV3; permissions: ["tabs"]; no content scripts
+manifest.json   → MV3; no permissions; no content scripts
 ```
 
 ## How It Works
 
 1. User drops a `.ics` file onto the popup; `popup.js` reads it via `FileReader` and calls `CalendarImport.parse`, which uses the bundled ical.js library.
 2. The popup previews VEVENT details and builds `https://calendar.google.com/calendar/render?action=TEMPLATE&...` URLs.
-3. Clicking Open uses `chrome.tabs.create` — one new tab per event. The user reviews and saves each template in Google Calendar. Open Flighty launches the installed app via its URL scheme.
+3. Clicking Open uses `chrome.tabs.create` — one new tab per event. The user reviews and saves each template in Google Calendar.
 
-The active extension does not read Gmail or detect flight emails. Legacy files under `content/` are not loaded by the manifest.
+The active extension does not read Gmail or detect flight emails. The legacy `content/` Gmail scripts were removed.
 
 ## Known Limitation / Planned Upgrade
 

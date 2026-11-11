@@ -56,12 +56,18 @@ fileInput.addEventListener('change', (e) => {
 
 function showLoading() {
   dropZone.classList.add('loading');
-  dropZone.querySelector('p').innerHTML = 'Reading calendar files<span class="loading-dots"></span>';
+  const p = dropZone.querySelector('p');
+  p.replaceChildren('Reading calendar files', Object.assign(document.createElement('span'), {className: 'loading-dots'}));
+  dropZone.setAttribute('aria-busy', 'true');
 }
 
 function hideLoading() {
   dropZone.classList.remove('loading');
-  dropZone.querySelector('p').innerHTML = 'Choose <strong>.ics</strong> file(s)<br><span id="drop-zone-help">Drop files here or click to browse</span>';
+  const p = dropZone.querySelector('p');
+  const strong = document.createElement('strong'); strong.textContent = '.ics';
+  const help = document.createElement('span'); help.id = 'drop-zone-help'; help.textContent = 'Drop files here or click to browse';
+  p.replaceChildren('Choose ', strong, ' file(s)', document.createElement('br'), help);
+  dropZone.removeAttribute('aria-busy');
 }
 
 // ─── File Processing ──────────────────────────────────────────────────────────
@@ -77,7 +83,7 @@ function processFiles(files) {
   files.forEach((file) => {
     const reader = new FileReader();
     reader.onerror = () => {
-      errors.push(file.name);
+      errors.push(`${file.name} (could not be read)`);
       remaining--;
       if (remaining === 0) finishProcessing(errors);
     };
@@ -86,8 +92,7 @@ function processFiles(files) {
         const group = parseFile(file.name, reader.result);
         if (group) fileGroups.push(group);
       } catch (err) {
-        console.error(`ICS parse error (${file.name}):`, err);
-        errors.push(file.name);
+        errors.push(`${file.name} (${err && err.message ? err.message : 'unknown error'})`);
       }
       remaining--;
       if (remaining === 0) finishProcessing(errors);
@@ -107,7 +112,7 @@ function finishProcessing(errors) {
   if (!fileGroups.length) {
     showStatus(
       errors.length
-        ? `Could not parse: ${errors.join(', ')}`
+        ? `Could not parse: ${errors.join('; ')}`
         : 'No events found in the uploaded file(s).',
       'error'
     );
@@ -116,7 +121,7 @@ function finishProcessing(errors) {
 
   renderEvents(fileGroups);
   if (errors.length) {
-    showStatus(`Could not parse: ${errors.join(', ')}`, 'error');
+    showStatus(`Could not parse: ${errors.join('; ')}`, 'error');
   } else {
     hideStatus();
   }
@@ -128,117 +133,99 @@ function finishProcessing(errors) {
     dropZone.classList.remove('fade-out');
     preview.style.display = 'block';
     preview.classList.add('fade-in');
+    preview.querySelector('button')?.focus();
   }, 200);
 }
-
-// ─── Google Calendar URL Builder ──────────────────────────────────────────────
 
 const {isAllDay}=CalendarImport;
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
+const MAX_OPEN_ALL = 10;
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function describeTimes(event) {
+  const allDay = isAllDay(event.startDate);
+  const start = event.startDate ? event.startDate.toJSDate() : null;
+  const end = event.endDate ? event.endDate.toJSDate() : null;
+  if (!start) return 'No date';
+  if (allDay) {
+    let range = formatDateOnly(start);
+    if (end) {
+      // ICS all-day end is exclusive. Step back one calendar day (setDate keeps
+      // this correct across DST changes, unlike subtracting 86400000 ms).
+      const lastDay = new Date(end);
+      lastDay.setDate(lastDay.getDate() - 1);
+      if (!isSameDay(start, lastDay)) range += ` — ${formatDateOnly(lastDay)}`;
+    }
+    return range;
+  }
+  if (end && !isSameDay(start, end)) return `${formatDateTime(start)} — ${formatDateTime(end)}`;
+  const endStr = end ? formatTime(end) : '';
+  return endStr ? `${formatDateTime(start)} — ${endStr}` : formatDateTime(start);
+}
+
 function renderEvents(groups) {
-  let html = '';
+  const frag = document.createDocumentFragment();
   const totalEvents = groups.reduce((sum, g) => sum + g.events.length, 0);
   const multiFile = groups.length > 1;
 
   if (totalEvents > 1) {
-    html += `<p class="events-header">${totalEvents} events ready to review</p>`;
-    html += `<button class="btn-open-all" id="openAllBtn">Open ${totalEvents} events in Google Calendar</button>`;
+    frag.append(el('p', 'events-header', `${totalEvents} events ready to review`));
+    const label = totalEvents > MAX_OPEN_ALL
+      ? `Open first ${MAX_OPEN_ALL} of ${totalEvents} events`
+      : `Open ${totalEvents} events in Google Calendar`;
+    const openAll = el('button', 'btn-open-all', label);
+    openAll.type = 'button';
+    openAll.addEventListener('click', () => {
+      const urls = parsedUrls.slice(0, MAX_OPEN_ALL);
+      const note = parsedUrls.length > MAX_OPEN_ALL
+        ? `Open the first ${MAX_OPEN_ALL} of ${parsedUrls.length} events in new tabs? Use the Open buttons for the rest.`
+        : `Open ${urls.length} new tabs in Google Calendar?`;
+      if (!window.confirm(note)) return;
+      urls.forEach((url, i) => {
+        setTimeout(() => chrome.tabs.create({ url, active: false }), i * 300);
+      });
+    });
+    frag.append(openAll);
   }
 
   let globalIndex = 0;
   groups.forEach(({ filename, events }) => {
-    if (multiFile) {
-      html += `<div class="file-group-label">${escapeHtml(filename)}</div>`;
-    }
-
-    html += events.map(({ event, url }) => {
-      const allDay = isAllDay(event.startDate);
-      const start = event.startDate ? event.startDate.toJSDate() : null;
-      const end = event.endDate ? event.endDate.toJSDate() : null;
-      let timeRange;
-      if (!start) {
-        timeRange = 'No date';
-      } else if (allDay) {
-        timeRange = formatDateOnly(start);
-        if (end && !isSameDay(start, end) && !isSameDay(start, new Date(end - 86400000))) {
-          // Multi-day all-day event: show end date (subtract 1 day since ICS end is exclusive)
-          timeRange += ` — ${formatDateOnly(new Date(end - 86400000))}`;
-        }
-      } else if (end && !isSameDay(start, end)) {
-        // Cross-day timed event: show full date+time for both
-        timeRange = `${formatDateTime(start)} — ${formatDateTime(end)}`;
-      } else {
-        const dateStr = formatDateTime(start);
-        const endStr = end ? formatTime(end) : '';
-        timeRange = endStr ? `${dateStr} — ${endStr}` : dateStr;
-      }
+    if (multiFile) frag.append(el('div', 'file-group-label', filename));
+    events.forEach(({ event }) => {
       const idx = globalIndex++;
-
-      return `
-        <div class="event-card">
-          <div class="ev-title">${escapeHtml(event.summary || 'Untitled Event')}</div>
-          <div class="ev-meta">
-            <span>${timeRange}</span>
-            ${event.location ? `<span>${escapeHtml(event.location)}</span>` : ''}
-          </div>
-          <div class="ev-actions">
-            <button class="btn btn-gcal" data-index="${idx}" aria-label="Open ${escapeHtml(event.summary || 'untitled event')} in Google Calendar">Open</button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  });
-
-  // Jump to the Flighty desktop app
-  html += `<button class="btn-flighty" id="flightyBtn">Open Flighty</button>`;
-
-  // "Upload another" link
-  html += `<div class="reset-link-wrap">
-    <a href="#" id="resetBtn" class="reset-link">Choose different files</a>
-  </div>`;
-
-  eventList.innerHTML = html;
-
-  // Attach listeners
-  eventList.querySelectorAll('.btn-gcal').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const idx = parseInt(e.currentTarget.dataset.index);
-      chrome.tabs.create({ url: parsedUrls[idx] });
+      const title = event.summary || 'Untitled Event';
+      const card = el('div', 'event-card');
+      card.append(el('div', 'ev-title', title));
+      const meta = el('div', 'ev-meta');
+      meta.append(el('span', '', describeTimes(event)));
+      if (event.location) meta.append(el('span', '', event.location));
+      card.append(meta);
+      const actions = el('div', 'ev-actions');
+      const btn = el('button', 'btn btn-gcal', 'Open');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', `Open ${title} in Google Calendar`);
+      btn.addEventListener('click', () => chrome.tabs.create({ url: parsedUrls[idx] }));
+      actions.append(btn);
+      card.append(actions);
+      frag.append(card);
     });
   });
 
-  const openAllBtn = document.getElementById('openAllBtn');
-  if (openAllBtn) {
-    openAllBtn.addEventListener('click', () => {
-      // Stagger tab opens to avoid overwhelming the browser
-      parsedUrls.forEach((url, i) => {
-        setTimeout(() => chrome.tabs.create({ url, active: false }), i * 300);
-      });
-    });
-  }
-
-  document.getElementById('flightyBtn').addEventListener('click', openFlighty);
-
-  document.getElementById('resetBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    resetUI();
-  });
-}
-
-// ─── Flighty ──────────────────────────────────────────────────────────────────
-
-function openFlighty() {
-  // Flighty registers the flighty:// scheme on macOS/iOS. Open it in a
-  // throwaway tab so the OS hands off to the app, then close the tab.
-  chrome.tabs.create({ url: 'flighty://' }, (tab) => {
-    if (chrome.runtime.lastError || !tab?.id) return;
-    setTimeout(
-      () => chrome.tabs.remove(tab.id, () => void chrome.runtime.lastError),
-      800
-    );
-  });
+  const wrap = el('div', 'reset-link-wrap');
+  const reset = el('a', 'reset-link', 'Choose different files');
+  reset.href = '#';
+  reset.addEventListener('click', (e) => { e.preventDefault(); resetUI(); });
+  wrap.append(reset);
+  frag.append(wrap);
+  eventList.replaceChildren(frag);
 }
 
 function resetUI() {
@@ -246,7 +233,8 @@ function resetUI() {
   preview.classList.remove('fade-in');
   dropZone.style.display = '';
   dropZone.classList.remove('fade-out');
-  eventList.innerHTML = '';
+  eventList.replaceChildren();
+  dropZone.focus();
   fileInput.value = '';
   parsedUrls = [];
   parsedEventKeys.clear();
@@ -277,12 +265,6 @@ function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML.replace(/"/g, '&quot;');
 }
 
 function showStatus(msg, type) {

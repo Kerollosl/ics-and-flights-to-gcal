@@ -21,7 +21,8 @@
   return `https://calendar.google.com/calendar/render?${params}`;
  }
  function parse(text){
-  const comp=new ICAL.Component(ICAL.parse(text));
+  let comp;
+  try{comp=new ICAL.Component(ICAL.parse(text));}catch(e){throw Error('Not a valid calendar (.ics) file');}
   comp.getAllSubcomponents('vtimezone').forEach(c=>ICAL.TimezoneService.register(new ICAL.Timezone(c)));
   const seen=new Set();
   return comp.getAllSubcomponents('vevent').flatMap(c=>{

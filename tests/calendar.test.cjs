@@ -11,3 +11,5 @@ test('overridden instances fail explicitly',()=>assert.throws(()=>parse(['DTSTAR
 
 test('unknown named zone rejected rather than silently shifted',()=>assert.throws(()=>parse(['DTSTART;TZID=Unknown/Zone:20261010T120000']),/Missing VTIMEZONE/));
 test('timed missing end defaults to one hour',()=>assert.equal(new URL(parse(['DTSTART:20261010T120000Z'])[0].url).searchParams.get('dates'),'20261010T120000Z/20261010T130000Z'));
+
+test('garbage input gives a readable error',()=>assert.throws(()=>context.CalendarImport.parse('not a calendar'),/Not a valid calendar/));

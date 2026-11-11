@@ -1,16 +1,14 @@
 {
   "manifest_version": 3,
   "name": "ICS to Google Calendar",
-  "version": "1.0",
-  "description": "Upload a .ics file and open it directly in Google Calendar. No account access needed.",
+  "version": "1.0.0",
+  "description": "Preview .ics calendar files on your device, then open each event in Google Calendar. No sign-in, no account access.",
+  "minimum_chrome_version": "111",
+  "author": "Kerollos Lowandy",
   "action": {
+    "default_title": "ICS to Google Calendar",
     "default_popup": "popup/popup.html",
-    "default_icon": "icon48.png"
+    "default_icon": {"16": "icon16.png", "48": "icon48.png"}
   },
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
-  },
-  "permissions": ["tabs"]
+  "icons": {"16": "icon16.png", "48": "icon48.png", "128": "icon128.png"}
 }

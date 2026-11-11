@@ -12,16 +12,13 @@
 
   --text-primary: oklch(24% 0.015 255);
   --text-secondary: oklch(52% 0.014 255);
-  --text-tertiary: oklch(68% 0.01 255);
+  --text-tertiary: oklch(52% 0.014 255);
 
   --accent: oklch(53% 0.16 258);
   --accent-hover: oklch(46% 0.16 258);
   --accent-subtle: oklch(94% 0.025 258);
   --accent-on: oklch(99% 0.005 258);
 
-  --success-bg: oklch(95% 0.03 150);
-  --success-text: oklch(42% 0.11 150);
-  --success-border: oklch(85% 0.06 150);
 
   --error-bg: oklch(96% 0.025 25);
   --error-text: oklch(48% 0.16 25);
@@ -40,16 +37,13 @@
 
     --text-primary: oklch(94% 0.006 255);
     --text-secondary: oklch(74% 0.012 255);
-    --text-tertiary: oklch(55% 0.012 255);
+    --text-tertiary: oklch(70% 0.012 255);
 
     --accent: oklch(72% 0.14 258);
     --accent-hover: oklch(78% 0.14 258);
     --accent-subtle: oklch(28% 0.05 258);
     --accent-on: oklch(14% 0.02 258);
 
-    --success-bg: oklch(24% 0.05 150);
-    --success-text: oklch(78% 0.13 150);
-    --success-border: oklch(35% 0.07 150);
 
     --error-bg: oklch(26% 0.06 25);
     --error-text: oklch(80% 0.14 25);
@@ -165,7 +159,7 @@ header h1 {
 
 .ev-title {
   grid-column: 1;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 6px;
@@ -223,22 +217,12 @@ header h1 {
 
 .btn:focus-visible,
 .reset-link:focus-visible,
-.btn-open-all:focus-visible,
-.btn-flighty:focus-visible {
+.btn-open-all:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.btn-outline {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-}
 
-.btn-outline:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
 
 /* Status */
 .status {
@@ -256,11 +240,6 @@ header h1 {
   border-color: var(--error-border);
 }
 
-.status-success {
-  background: var(--success-bg);
-  color: var(--success-text);
-  border-color: var(--success-border);
-}
 
 /* Footer */
 footer {
@@ -277,7 +256,7 @@ footer svg {
 }
 
 footer p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   font-weight: 400;
 }
@@ -301,7 +280,7 @@ footer p {
   border: none;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   background: var(--accent);
@@ -313,34 +292,11 @@ footer p {
   background: var(--accent-hover);
 }
 
-/* Secondary action — launch the Flighty desktop app */
-.btn-flighty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 11px;
-  margin-top: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text-secondary);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
 
-.btn-flighty:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
 
 /* File group label (shown when multiple files uploaded) */
 .file-group-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-tertiary);
   letter-spacing: 0.01em;
