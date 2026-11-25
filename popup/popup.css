@@ -234,7 +234,8 @@ header h1 {
   border: 1px solid transparent;
 }
 
-.status-error {
+.status-error,
+.status-warning {
   background: var(--error-bg);
   color: var(--error-text);
   border-color: var(--error-border);
@@ -342,6 +343,12 @@ footer p {
 }
 
 .reset-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
   font-size: 12px;
   color: var(--accent);
   text-decoration: none;

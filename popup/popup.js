@@ -15,6 +15,7 @@ const parsedEventKeys = new Set();
 
 // Store file groups: [{ filename, events: [{ event, url }] }]
 let fileGroups = [];
+let parseWarnings = [];
 
 // ─── File Input ───────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ function processFiles(files) {
   let remaining = files.length;
   let errors = [];
   fileGroups = [];
+  parseWarnings = [];
   parsedUrls = [];
   parsedEventKeys.clear();
   showLoading();
@@ -102,7 +104,9 @@ function processFiles(files) {
 }
 
 function parseFile(filename,icsText){
- const events=CalendarImport.parse(icsText).filter(({event})=>{const key=`${event.uid}|${event.startDate.toString()}`;if(parsedEventKeys.has(key))return false;parsedEventKeys.add(key);return true;});if(!events.length)return null;
+ const parsed=CalendarImport.parse(icsText);
+ (parsed.warnings||[]).forEach(w=>parseWarnings.push(`${filename}: ${w}`));
+ const events=parsed.filter(({event})=>{const key=`${event.uid}|${event.startDate.toString()}`;if(parsedEventKeys.has(key))return false;parsedEventKeys.add(key);return true;});if(!events.length)return null;
  events.forEach(({url})=>parsedUrls.push(url));return {filename,events};
 }
 
@@ -113,15 +117,20 @@ function finishProcessing(errors) {
     showStatus(
       errors.length
         ? `Could not parse: ${errors.join('; ')}`
-        : 'No events found in the uploaded file(s).',
+        : parseWarnings.length
+          ? `No events to open. ${parseWarnings.join('; ')}`
+          : 'No events found in the uploaded file(s).',
       'error'
     );
     return;
   }
 
   renderEvents(fileGroups);
+  const warningText = parseWarnings.length ? `Note: ${parseWarnings.join('; ')}` : '';
   if (errors.length) {
-    showStatus(`Could not parse: ${errors.join('; ')}`, 'error');
+    showStatus(`Could not parse: ${errors.join('; ')}${warningText ? `. ${warningText}` : ''}`, 'error');
+  } else if (warningText) {
+    showStatus(warningText, 'warning');
   } else {
     hideStatus();
   }
@@ -220,9 +229,9 @@ function renderEvents(groups) {
   });
 
   const wrap = el('div', 'reset-link-wrap');
-  const reset = el('a', 'reset-link', 'Choose different files');
-  reset.href = '#';
-  reset.addEventListener('click', (e) => { e.preventDefault(); resetUI(); });
+  const reset = el('button', 'reset-link', 'Choose different files');
+  reset.type = 'button';
+  reset.addEventListener('click', () => resetUI());
   wrap.append(reset);
   frag.append(wrap);
   eventList.replaceChildren(frag);
@@ -239,6 +248,7 @@ function resetUI() {
   parsedUrls = [];
   parsedEventKeys.clear();
   fileGroups = [];
+  parseWarnings = [];
   hideStatus();
 }
 
