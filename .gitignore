@@ -17,3 +17,10 @@ playwright-report/
 .idea/
 .DS_Store
 dist/
+
+# Agent instruction files (local only)
+CLAUDE.md
+AGENTS.md
+.claude/
+.codex/
+.agents/
